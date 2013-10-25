@@ -40,12 +40,8 @@
 --          [/indicator]
 --
 --          [command]
---              # If yes (default no), this command will be executed instead
---              # of showing items.
---              instead_of_items=no
---
---              # If present, all tags in this block will be executed when this
---              # section is opened.
+--              # If present, this command will be executed instead of showing
+--              # items.
 --          [/command]
 --
 --          # A shop item
@@ -275,6 +271,19 @@ end
 -------------------------------------------------------------------------------
 
 local function generate_section_command(section)
+    -- Handle sections with [command]
+    ---------------------------------
+
+    if section.command ~= nil then
+        return { "command", {
+            { "command", section.command },
+            { "set_variable", {
+                name = "cs_shop_location",
+                value = section.parent and section.parent.id or "e"
+            }}
+        }}
+    end
+
     -- Find image_attr
     ------------------
 
