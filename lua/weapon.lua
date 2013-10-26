@@ -25,12 +25,22 @@ function cs_shop.item.weapon(cfg)
     end
 
     local price     = cfg.price or wml_error("weapon has to have a price")
+    local info      = cfg.info
     local primary   = parse_weapon(cfg)
     local secondary = nil
 
     local secondary_cfg = wml_find_cfg(cfg, "secondary")
     if secondary_cfg ~= nil then
        secondary = parse_weapon(secondary_cfg)
+    end
+
+    -- Generate name text
+    ---------------------
+
+    local name = primary.user_name
+
+    if info ~= nil then
+        name = name .. string.format(" <span size='small' color='#9999aa'>(%s)</span>", info)
     end
 
     -- Generate benefits text
@@ -118,7 +128,7 @@ function cs_shop.item.weapon(cfg)
 
     return {
         price    = price,
-        name     = primary.user_name,
+        name     = name,
         image    = primary.image,
         benefits = benefits,
 
