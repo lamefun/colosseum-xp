@@ -59,31 +59,31 @@ for x in range(0, image_width):
             rect_y = y
             rect_width = 1
             rect_height = 1
-            can_increase_image_width = True
-            can_increase_image_height = True
+            can_increase_width = True
+            can_increase_height = True
 
             while True:
                 if rect_x + rect_width == image_width:
-                    can_increase_image_width = False
+                    can_increase_width = False
 
                 if rect_y + rect_height == image_height:
-                    can_increase_image_height = False
+                    can_increase_height = False
 
-                if can_increase_image_height and check_row(x, x + rect_width, 
+                if can_increase_height and check_row(x, x + rect_width, 
                                                      y + rect_height, color):
                     mark_row(x, x + rect_width, y + rect_height)
                     rect_height += 1
                 else:
-                    can_increase_image_height = False
+                    can_increase_height = False
 
-                if can_increase_image_width and check_column(x + rect_width, y,
+                if can_increase_width and check_column(x + rect_width, y,
                                                        y + rect_height, color):
                     mark_column(x + rect_width, y, y + rect_height)
                     rect_width += 1
                 else:
-                    can_increase_image_width = False
+                    can_increase_width = False
 
-                if not can_increase_image_width and not can_increase_image_height:
+                if not can_increase_width and not can_increase_height:
                     break
 
             if color[3] != 0:
