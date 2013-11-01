@@ -47,7 +47,7 @@ function cs_shop.item.weapon(cfg)
     -------------------------
 
     local function benefits_of(weapon)
-        local benefits = string.format("%i-%i %s, %s",
+        local benefits = string.format("%i-%i %s-%s",
             weapon.damage, weapon.strikes, weapon.range, weapon.type)
 
         if weapon.specials ~= nil then
