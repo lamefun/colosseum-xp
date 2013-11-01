@@ -21,7 +21,7 @@ Installation
 
   * [Download ZIP](https://github.com/lamefun/colosseum-xp/archive/master.zip)
   * Extract the downloaded `master.zip`.
-  * Rename the `colosseum-xp-master` folder into `Colosseum_XP`.
+  * Rename the `colosseum-xp-master` folder to `Colosseum_XP`.
   * Put the `Colosseum_XP` folder in `~/.local/share/wesnoth/1.10/data/add-ons`
-    *(GNU/Linux)* or `My Documents\My Games\Wesnoth1.10` *(Windows XP)* or
-    `Documents\My Games\Wesnoth1.10` *(Windows Vista/7/8)* and enjoy.
+    *(GNU/Linux)* or `My Documents\My Games\Wesnoth1.10\add-ons` *(Windows XP)*
+    or `Documents\My Games\Wesnoth1.10\add-ons` *(Windows Vista/7/8)* and enjoy.
