@@ -75,7 +75,7 @@ local function generate_wave(desc)
             break
         end
 
-        local extend_i = not_maxed_groups[math.floor(math.random(1, #not_maxed_groups) + 0.5)]
+        local extend_i = cc.choice(not_maxed_groups)
         group_sizes[extend_i] = group_sizes[extend_i] + 1
         unit_count = unit_count + 1
     end
@@ -96,8 +96,7 @@ local function generate_wave(desc)
     for i,group in ipairs(desc.groups) do
         local possible = possible_units[i]
         for j = 1,group_sizes[i] do
-            local unit_i = math.floor(math.random(1, #possible) + 0.5)
-            table.insert(units, possible[unit_i])
+            table.insert(units, cc.choice(possible))
         end
     end
 

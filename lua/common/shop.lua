@@ -154,46 +154,6 @@ function delocalize_tag(tag)
 end
 
 -------------------------------------------------------------------------------
--- Helpers
--------------------------------------------------------------------------------
-
--- Finds the first sub-tag with the given name in tag's content (tag[2]).
-function wml_find_tag(cfg, name)
-    for i,tag in ipairs(cfg) do
-        if tag[1] == name then
-            return tag
-        end
-    end
-
-    return nil
-end
-
--- Finds the first sub-tag with the given name in the given tag content
--- (tag[2]), and returns its content (subtag[2]).
-function wml_find_cfg(cfg, name)
-    local tag = wml_find_tag(cfg, name)
-
-    if tag ~= nil then
-        return tag[2]
-    end
-
-    return nil
-end
-
--- Finds all sub-tags with the given name in tag's content (tag[2]).
-function wml_find_many_tags(cfg, name)
-    local tags = {}
-
-    for i,tag in ipairs(cfg) do
-        if tag[1] == name then
-            table.insert(tags, tag)
-        end
-    end
-
-    return tags
-end
-
--------------------------------------------------------------------------------
 -- cc_shop tag parsing
 -------------------------------------------------------------------------------
 
@@ -298,7 +258,7 @@ local function prepare_section(section)
 end
 
 local function check_item_status(item)
-    if maybe_check_condition(item.show_if, false) then
+    if not maybe_check_condition(item.show_if, true) then
         return 'hidden'
     end
 
@@ -504,14 +464,15 @@ local function warn_still_byuable(section)
     if have_buyable == true then
         wesnoth.fire("message", {
             speaker = "narrator",
-            message = _"You haven't spent all your gold, there are still things you could buy in this shop. Are you sure you want to exit?",
+            caption = _"You haven't spent all your gold",
+            message = _"There are still things you could buy in this shop. Are you sure you want to exit?",
 
             { "option", {
-                message = _"Yes",
+                message = _"&items/ball-green.png~SCALE(24,24)=Yes",
             }},
 
             { "option", {
-                message = _"No",
+                message = _"&items/ball-magenta.png~SCALE(24,24)=No",
                 { "command", {
                     { "set_variable", {
                         name = "cc_shop_location",
@@ -534,6 +495,8 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
 
     -- Parse the cc_shop tag
     ------------------------
+
+    cc.transform(cfg)
 
     local root_section = parse_section(cfg, nil)
 
