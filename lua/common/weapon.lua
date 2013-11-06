@@ -5,7 +5,7 @@ local function _(s)
     return tostring(textdomain(s))
 end
 
-function cs_shop.item.weapon(cfg)
+function cc_shop.item.weapon(cfg)
     -- Parse
     --------
 

@@ -7,7 +7,7 @@
 --
 --  Usage:
 --
---  [cs_shop]
+--  [cc_shop]
 --      # The shop root is itself a section, so all attributes from the
 --      # [section] subtag can be used here.
 --
@@ -99,7 +99,7 @@
 --              # ...
 --          [/section]
 --      [/section]
---  [/cs_shop]
+--  [/cc_shop]
 --
 -------------------------------------------------------------------------------
 
@@ -115,9 +115,9 @@ end
 -- Put funtions in this table to register section and item types
 -------------------------------------------------------------------------------
 
-cs_shop = {}
-cs_shop.item = {}
-cs_shop.section = {}
+cc_shop = {}
+cc_shop.item = {}
+cc_shop.section = {}
 
 -------------------------------------------------------------------------------
 -- Delocalizer, because string.format doesn't understand userdata
@@ -194,7 +194,7 @@ function wml_find_many_tags(cfg, name)
 end
 
 -------------------------------------------------------------------------------
--- cs_shop tag parsing
+-- cc_shop tag parsing
 -------------------------------------------------------------------------------
 
 local function parse_item(cfg)
@@ -240,6 +240,7 @@ local function parse_section(cfg, parent, number)
         indicators = wml_find_many_tags(cfg, "indicator"),
 
         prepare    = wml_find_cfg(cfg, "prepare"),
+        cleanup    = wml_find_cfg(cfg, "cleanup"),
         show_if    = wml_find_cfg(cfg, "show_if"),
         command    = wml_find_cfg(cfg, "command"),
 
@@ -258,8 +259,8 @@ local function parse_section(cfg, parent, number)
         elseif tag[1] == "section" then
             table.insert(sections, parse_section(tag[2], section, sub_section_number))
             sub_section_number = sub_section_number + 1
-        elseif cs_shop.item[tag[1]] ~= nil then
-            table.insert(items, cs_shop.item[tag[1]](tag[2]))
+        elseif cc_shop.item[tag[1]] ~= nil then
+            table.insert(items, cc_shop.item[tag[1]](tag[2]))
         end
     end
 
@@ -267,23 +268,61 @@ local function parse_section(cfg, parent, number)
 end
 
 -------------------------------------------------------------------------------
--- Section command generation
+
+local function maybe_fire_commands(commands)
+    if commands ~= nil then
+        wesnoth.fire("command", commands)
+    end
+end
+
+local function maybe_check_condition(condition, if_nil)
+    if condition ~= nil then
+        return wesnoth.eval_conditional(condition)
+    else
+        return if_nil
+    end
+end
+
+local function clear_variable(name)
+    wesnoth.fire("clear_variable", { name = name })
+end
+
 -------------------------------------------------------------------------------
 
-local function generate_section_command(section)
-    -- Handle sections with [command]
-    ---------------------------------
+local function prepare_section(section)
+    maybe_fire_commands(section.prepare)
 
-    if section.command ~= nil then
-        return { "command", {
-            { "command", section.command },
-            { "set_variable", {
-                name = "cs_shop_location",
-                value = section.parent and section.parent.id or "e"
-            }}
-        }}
+    for i,item in ipairs(section.items) do
+        maybe_fire_commands(item.prepare)
+    end
+end
+
+local function check_item_status(item)
+    if maybe_check_condition(item.show_if, false) then
+        return 'hidden'
     end
 
+    local too_expensive = wesnoth.eval_conditional {
+        { "variable", { 
+            name = "cc_shop_gold",
+            less_than = item.price 
+        }}
+    }
+
+    if too_expensive then
+        return 'too_expensive'
+    end
+
+    if maybe_check_condition(item.have_all_if, false) then
+        return 'have_all'
+    end
+
+    return 'buyable'
+end
+
+-------------------------------------------------------------------------------
+
+local function show_section(section)
     -- Find image_attr
     ------------------
 
@@ -304,7 +343,7 @@ local function generate_section_command(section)
     -- Generate header
     ------------------
 
-    local header = "<span foreground='gold'>Gold: $cs_shop_gold</span>"
+    local header = "<span foreground='gold'>Gold: $cc_shop_gold</span>"
 
     for i,indicator in ipairs(section.indicators) do
         local color = indicator[2].color or '#cccccc'
@@ -320,137 +359,6 @@ local function generate_section_command(section)
     end
 
     header = header .. "\n"
-
-    -- Generate preparation and cleanup commands for items
-    ------------------------------------------------------
-
-    local items_prepare_cfg = {}
-    local items_cleanup_cfg = {}
-
-    for i,item in ipairs(section.items) do
-        if item.prepare ~= nil then
-            table.insert(items_prepare_cfg, { "command", item.prepare })
-        end
-
-        if item.cleanup ~= nil then
-            table.insert(items_cleanup_cfg, { "command", item.cleanup })
-        end
-    end
-
-    -- Generate code that checks statuses of items
-    ----------------------------------------------
-    
-    local items_check_cfg = {}
-
-    for i,item in ipairs(section.items) do
-        local status_prefix      = "tmp.cs_shop_item_" .. tostring(i)
-        local status_variable    = status_prefix .. "_status"
-        local count_variable     = status_prefix .. "_count"
-        local max_count_variable = status_prefix .. "_max_count"
-
-        item.status_variable    = status_variable
-        item.count_variable     = count_variable
-        item.max_count_variable = max_count_variable
-
-        -- Create / reset the variables that store the status
-        -----------------------------------------------------
-
-        -- Possible statuses:
-        --
-        -- buyable       - can buy
-        -- hidden        - hidden from view entirely 
-        -- have_all      - already have maximum amount
-        -- too_expensive - can't afford
-        
-        table.insert(items_check_cfg, { "set_variable", {
-            name=status_variable,
-            value="unknown"    
-        }})
-
-        -- hidden check
-        ---------------
-
-        if item.show_if ~= nil then
-            table.insert(items_check_cfg, { "if", {
-                { "not", {
-                    { "and", item.show_if }
-                }},
-
-                { "then", {
-                    { "set_variable", {
-                        name = status_variable,
-                        value = "hidden"
-                    }}
-                }}
-            }})
-        end
-
-        -- have_all check
-        -----------------        
-
-        if item.have_all_if ~= nil then
-            table.insert(items_check_cfg, { "if", {
-                { "variable", {
-                    name = status_variable,
-                    equals = "unknown",
-                }},
-
-                { "and", item.have_all_if },
-
-                { "then", {
-                    { "set_variable", {
-                        name = status_variable,
-                        value = "have_all"
-                    }}
-                }}
-            }})
-        end
-
-        -- too_expensive check
-        ----------------------
-
-        table.insert(items_check_cfg, { "if", {
-            { "variable", {
-                name = status_variable,
-                equals = "unknown",
-            }},
-
-            { "variable", {
-                name = "cs_shop_gold",
-                less_than = item.price
-            }},
-
-            { "then", {
-                { "set_variable", {
-                    name = status_variable,
-                    value = "too_expensive"
-                }}
-            }}
-        }})
-
-        -- it's buyable then
-        --------------------
-
-        table.insert(items_check_cfg, { "if", {
-            { "variable", {
-                name = status_variable,
-                equals = "unknown",
-            }},
-
-            { "then", {
-                { "set_variable", {
-                    name = status_variable,
-                    value = "buyable"
-                }},
-
-                { "set_variable", {
-                    name = "cs_shop_have_buyable_items",
-                    value = "yes"
-                }}
-            }}
-        }})
-    end
-
 
     -- Generate message
     -------------------
@@ -472,7 +380,7 @@ local function generate_section_command(section)
 
         { "command", {
             { "set_variable", {
-                name = "cs_shop_location",
+                name = "cc_shop_location",
                 value = section.parent and section.parent.id or "e"
             }}
         }}
@@ -496,151 +404,152 @@ local function generate_section_command(section)
         -- Image
         --------
 
-        local image = item.image
+        local image = item.image and item.image .. (image_attr or "") or ""
 
-        if image ~= nil then
-            image = image .. (image_attr or "")
-        else
-            image = ''
+        -- Option
+        ---------
+
+        local status = check_item_status(item)
+
+        if status == 'buyable' then
+            table.insert(message_cfg, { "option", {
+                message=string.format(
+                    "&%s=<span foreground='#88ff22'>%i gold</span>: %s%s",
+                    image, item.price, item.name, benefit_text),
+
+                { "command", {
+                    { "gold", {
+                        side = "$side_number",
+                        amount = -item.price
+                    }},
+
+                    { "command", item.command }
+                }}
+            }})
+        elseif status == 'too_expensive' then
+            table.insert(message_cfg, { "option", {
+                message=string.format(
+                    "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
+                    image, item.price, item.name, benefit_text),
+            }})
+        elseif status == 'have_all' then
+            table.insert(message_cfg, { "option", {
+                message=string.format(
+                    "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
+                    image, item.have_all_text, item.name, benefit_text),
+            }})
         end
-
-        -- When the item is buyable
-        ---------------------------
-
-        table.insert(message_cfg, { "option", {
-            message=string.format(
-                "&%s=<span foreground='#88ff22'>%i gold</span>: %s%s",
-                image, item.price, item.name, benefit_text),
-
-            { "show_if", {
-                { "variable", {
-                    name = item.status_variable,
-                    equals = "buyable"
-                }}
-            }},
-
-            { "command", {
-                { "gold", {
-                    side = "$side_number",
-                    amount = -item.price
-                }},
-
-                { "command", item.command }
-            }}
-        }})
-
-        -- When the item is not affordable
-        -----------------------------------
-
-        table.insert(message_cfg, { "option", {
-            message=string.format(
-                "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
-                image, item.price, item.name, benefit_text),
-
-            { "show_if", {
-                { "variable", {
-                    name = item.status_variable,
-                    equals = "too_expensive"
-                }}
-            }}
-        }})
-
-        -- When the item has already been bought
-        ----------------------------------------
-
-        table.insert(message_cfg, { "option", {
-            message=string.format(
-                "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
-                image, item.have_all_text, item.name, benefit_text),
-
-            { "show_if", {
-                { "variable", {
-                    name = item.status_variable,
-                    equals = "have_all"
-                }}
-            }}
-        }})
     end
 
     -- Generate options for sub-sections
     ------------------------------------
 
-    for i,sub_section in ipairs(section.sections) do
-        local image = sub_section.image
-
-        if image ~= nil then
-            image = image .. (image_attr or "")
-        else
-            image = ''
-        end
+    for i,sub in ipairs(section.sections) do
+        local image = sub.image and sub.image .. (image_attr or "") or ""
 
         local option_cfg = {
-            message=string.format("&%s=%s", image, sub_section.name),
+            message=string.format("&%s=%s", image, sub.name),
 
             { "command", {
                 { "set_variable", {
-                    name = "cs_shop_location",
-                    value = sub_section.id
+                    name = "cc_shop_location",
+                    value = sub.id
                 }}
             }}
         }
 
-        if sub_section.show_if ~= nil then
-            table.insert(option_cfg, { "show_if", sub_section.show_if })
+        if sub.show_if ~= nil then
+            table.insert(option_cfg, { "show_if", sub.show_if })
         end
 
         table.insert(message_cfg, { "option", option_cfg })
     end
 
+    -- Show the sections
+    --------------------
 
-    -- Generate command
-    -------------------
-
-    local command_cfg = {
-        { "store_gold", {
-            side = "$side_number",
-            variable = "cs_shop_gold"
-        }}
-    }
-
-    if section.prepare ~= nil then
-        table.insert(command_cfg, { "command", section.prepare })
-    end
-
-    table.insert(command_cfg, { "command", items_check_cfg })
-    table.insert(command_cfg, { "command", items_prepare_cfg })
-    table.insert(command_cfg, { "message", message_cfg })
-    table.insert(command_cfg, { "command", items_cleanup_cfg })
-
-    if section.cleanup ~= nil then
-        table.insert(command_cfg, { "command", section.cleanup })
-    end
-
-    return { "command", command_cfg }
+    wesnoth.fire("message", message_cfg)
 end
 
--------------------------------------------------------------------------------
--- WML action for shop
--------------------------------------------------------------------------------
+local function cleanup_section(section)
+    for i,item in ipairs(section.items) do
+        maybe_fire_commands(item.cleanup)
+    end
 
-function wesnoth.wml_actions.cs_shop(cfg_raw)
+    maybe_fire_commands(section.cleanup)
+end
+
+local function warn_still_byuable(section)
+    local have_buyable = false
+
+    local function with_all(section, fn)
+        fn(section)
+        for i,sub in ipairs(section.sections) do
+            with_all(sub, fn)
+        end
+    end
+
+    local function check_items(section)
+        for i,item in ipairs(section.items) do
+            if check_item_status(item) == 'buyable' then
+                have_buyable = true
+            end
+        end
+    end
+
+    with_all(section, prepare_section)
+    with_all(section, check_items)
+    with_all(section, cleanup_section)
+
+    if have_buyable == true then
+        wesnoth.fire("message", {
+            speaker = "narrator",
+            message = _"You haven't spent all your gold, there are still things you could buy in this shop. Are you sure you want to exit?",
+
+            { "option", {
+                message = _"Yes",
+            }},
+
+            { "option", {
+                message = _"No",
+                { "command", {
+                    { "set_variable", {
+                        name = "cc_shop_location",
+                        value = "r"
+                    }}
+                }}
+            }}
+        })
+    end
+    
+    return true
+end
+
+function wesnoth.wml_actions.cc_shop(cfg_raw)
 
     -- get __literal from cfg_raw and delocalize it
     -----------------------------------------------
 
     local cfg = delocalize_tag_cfg(cfg_raw.__literal)
 
-    -- Parse the cs_shop tag
+    -- Parse the cc_shop tag
     ------------------------
 
     local root_section = parse_section(cfg, nil)
 
-    -- Location switcher
-    --------------------
+    -- Make section-by-id table 
+    ---------------------------
+    
+    local section_by_id = {}
 
-    local location_switch_cases = {
-        variable="cs_shop_location"
-    }
+    local function populate_section_by_id(section)
+        section_by_id[section.id] = section
+        for i,sub in ipairs(section.sections) do
+            populate_section_by_id(sub)
+        end
+    end
+
+    populate_section_by_id(root_section)
 
     -- Location in the currently open shop
     --
@@ -649,39 +558,34 @@ function wesnoth.wml_actions.cs_shop(cfg_raw)
     --  r.1   - section 1
     --- r.N   - section N
     --  r.N.M - sub-section M in section N
+    wesnoth.set_variable("cc_shop_location", "r")
 
-    wesnoth.set_variable("cs_shop_location", "r")
+    while true do
+        wesnoth.fire("store_gold", {
+            side = "$side_number",
+            variable = "cc_shop_gold"
+        })
 
-    table.insert(location_switch_cases, { "case", {
-        value = "e"
-    }})
+        local location = wesnoth.get_variable("cc_shop_location")
 
-    local function generate_section_cases(section)
-        table.insert(location_switch_cases, { "case", {
-            value = section.id, 
-            generate_section_command(section)
-        }})
+        if location == "e" then
+            warn_still_byuable(root_section)
 
-        for i,section in ipairs(section.sections) do
-            generate_section_cases(section)
+            location = wesnoth.get_variable("cc_shop_location")
+            if location == "e" then
+                break
+            end
         end
+
+        local section = section_by_id[location]
+
+        prepare_section(section)
+        show_section(section)
+        cleanup_section(section)
     end
 
-    generate_section_cases(root_section)
-
-    -- Show the shop message
-    ------------------------
-
-    wesnoth.fire("while", {
-        { "variable", {
-            name = "cs_shop_location",
-            not_equals = "e"
-        }},
-
-        { "do", {
-            { "switch", location_switch_cases }
-        }}
-    })
+    clear_variable("cc_shop_location")
+    clear_variable("cc_shop_gold")
 end
 
 >>

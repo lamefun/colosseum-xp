@@ -124,7 +124,7 @@ for pixel in out_pixels:
 
 print("""
 [event]
-    name=colosseum prestart
+    name=cc unpack images
     [lua]
         code=<<unpack_image("{0}", {1}, {2}, {{{3}}}, {{{4}}}, {{{5}}}, {{{6}}})>>
     [/lua]

@@ -15,6 +15,8 @@ Colosseum XP
    * Doesn't scroll to Platypus every turn.
   * Fool-proofing:
    * Doesn't allow to end turn while standing on the shop.
+   * Gives a warning if you try to exit the shop with some items still
+     buyable.
 
 Installation
 ------------
