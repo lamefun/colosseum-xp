@@ -17,6 +17,7 @@
 --          name=_"Name"
 --          image=attacks/blank.png
 --          header=_"Here you can buy some items"
+--          speaker=$unit.id
 --
 --          # Attributes for all images in this section. Also, applies to
 --          # sub-sections, unless re-defined in the sub-sections themselves.
@@ -88,6 +89,18 @@
 --
 --                  # Sub-tags [and], [or], [not] can be used.
 --              [/have_all_if]
+--
+--              [check_buyable]
+--                  # Extended [have_all_if] and have_all_text. Use if the
+--                  # item has complex buyability conditions or multiple
+--                  # possible reasons to be unbuyable.
+--
+--                  # You can run arbitrary commands here to check if the
+--                  # item is buyable. If it isn't, set cc_unbuyable to yes
+--                  # and cc_unbuyable_reason to reason why it is unbuyable.
+--                  # If cc_unbuyable is set, but cc_unbuyable_reason isn't,
+--                  # have_all_text is used.
+--              [/check_buyable]
 --
 --              [command]
 --                  # Required. Command executed when the player buys the item.
@@ -169,6 +182,7 @@ local function parse_item(cfg)
         cleanup       = wml_find_cfg(cfg, "cleanup"),
         show_if       = wml_find_cfg(cfg, "show_if"),
         have_all_if   = wml_find_cfg(cfg, "have_all_if"),
+        check_buyable = wml_find_cfg(cfg, "check_buyable"),
         command       = wml_find_cfg(cfg, "command") or wml_error("shop item has to have a command")
     }
 end
@@ -195,6 +209,7 @@ local function parse_section(cfg, parent, number)
         name       = cfg.name  or wml_error("shop section has to have a name"),
         image      = cfg.image,
         image_attr = cfg.image_attr,
+        speaker    = cfg.speaker,
         header     = cfg.header,
 
         indicators = wml_find_many_tags(cfg, "indicator"),
@@ -273,8 +288,19 @@ local function check_item_status(item)
         return 'too_expensive'
     end
 
-    if maybe_check_condition(item.have_all_if, false) then
-        return 'have_all'
+    if item.check_buyable ~= nil then
+        wesnoth.set_variable("cc_unbuyable", false)
+        wesnoth.set_variable("cc_unbuyable_reason", item.have_all_text or _"have all")
+
+        wesnoth.fire("command", item.check_buyable)
+
+        local unbuyable = wesnoth.get_variable("cc_unbuyable")
+        
+        if unbuyable == true or unbuyable == "true" or unbuyable == "yes" then
+            return 'unbuyable', wesnoth.get_variable("cc_unbuyable_reason")
+        end
+    elseif maybe_check_condition(item.have_all_if, false) then
+        return 'unbuyable', item.have_all_text or _"have all"
     end
 
     return 'buyable'
@@ -283,22 +309,26 @@ end
 -------------------------------------------------------------------------------
 
 local function show_section(section)
-    -- Find image_attr
-    ------------------
+    local function inherited_get(name)
+        local value = section[name]
 
-    local image_attr = section.image_attr
-
-    if image_attr == nil then
-        local parent = section.parent
-        while parent ~= nil do
-            if parent.image_attr ~= nil then
-                image_attr = parent.image_attr
-                break
-            else
-                parent = parent.parent
+        if value == nil then
+            local parent = section.parent
+            while parent ~= nil do
+                if parent[name] ~= nil then
+                    value = parent[name]
+                    break
+                else
+                    parent = parent.parent
+                end
             end
         end
+
+        return value
     end
+
+    local image_attr = inherited_get("image_attr")
+    local speaker    = inherited_get("speaker") or "unit"
 
     -- Generate header
     ------------------
@@ -324,7 +354,7 @@ local function show_section(section)
     -------------------
 
     local message_cfg = {
-        speaker = "narrator",
+        speaker = speaker,
         caption = section.name, 
         message = header
     }
@@ -369,7 +399,7 @@ local function show_section(section)
         -- Option
         ---------
 
-        local status = check_item_status(item)
+        local status, reason = check_item_status(item)
 
         if status == 'buyable' then
             table.insert(message_cfg, { "option", {
@@ -392,11 +422,11 @@ local function show_section(section)
                     "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
                     image, item.price, item.name, benefit_text),
             }})
-        elseif status == 'have_all' then
+        elseif status == 'unbuyable' then
             table.insert(message_cfg, { "option", {
                 message=string.format(
                     "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
-                    image, item.have_all_text, item.name, benefit_text),
+                    image, reason, item.name, benefit_text),
             }})
         end
     end
