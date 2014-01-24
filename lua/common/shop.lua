@@ -594,8 +594,8 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
     clear_variable("cc_shop_location")
     clear_variable("cc_shop_gold")
 
-    wesnoth.message(string.format("shop performance: %.2f sec parser, %.2f sec generator (avg %.2f per section (%i total), %.2f per item (%i total))", 
-        parse_time, section_time, section_time / section_num, section_num, section_time / item_num, item_num))
+    -- wesnoth.message(string.format("shop performance: %.2f sec parser, %.2f sec generator (avg %.2f per section (%i total), %.2f per item (%i total))", 
+    --     parse_time, section_time, section_time / section_num, section_num, section_time / item_num, item_num))
 end
 
 >>
