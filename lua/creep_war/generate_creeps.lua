@@ -1,5 +1,10 @@
 <<
 
+local helper = wesnoth.require "lua/helper.lua"
+
+local unit_cfg_cache = {}
+local unit_tmp_cache = {}
+
 local function generate_one(score, data)
     local alignment = cc.weighted_choice {
         { 40, 'chaotic' },
@@ -17,13 +22,13 @@ local function generate_one(score, data)
 
     local level
 
-    if score < 10 then
+    if score < 20 then
         level = 0
-    elseif score < 20 then
-        level = cc.choice { 0, 1 }
     elseif score < 30 then
+        level = cc.choice { 0, 1 }
+    elseif score < 60 then
         level = 1
-    elseif score < 50 then
+    elseif score < 80 then
         level = cc.choice { 1, 2 }
     elseif score < 100 then
         level = 2
@@ -37,18 +42,39 @@ local function generate_one(score, data)
         level = cc.weighted_choice { { 60, 3 }, { 20, 4}, { 20, 5} }
     end
 
-    local available = cc.intersect {
-        cc.units_by_alignment[alignment],
-        cc.units_by_level[level],
-        cc.units_by_role[role]
-    }
+    local available = {}
+    local level_available = {}
+    
+    for id,ut in pairs(wesnoth.unit_types) do
+        if ut.level == level and ut.max_moves > 2 then
+            table.insert(level_available, id)
 
+            local cfg = unit_cfg_cache[id]
+            if cfg == nil then
+                cfg = ut.__cfg
+                unit_cfg_cache[id] = cfg
+            end
+
+            if cfg.alignment == alignment then
+                local tmp = unit_tmp_cache[id]
+                if tmp == nil then
+                    tmp = wesnoth.create_unit { type = id, random_traits = false }
+                    unit_tmp_cache[id] = tmp
+                end
+
+                if ut.max_moves / wesnoth.unit_movement_cost(tmp, "Gt") >= 1 then
+                    table.insert(available, id)
+                end
+            end
+        end
+    end
+    
     if #available == 0 then
         -- if the conditions are unsatisfiable, generate at least something
-        available = cc.units_by_level[level]
+        available = level_available
     end
 
-    return cc.choice(cc.keys(available))
+    return cc.choice(available)
 end
 
 function wesnoth.wml_actions.cw_generate_creeps(cfg_raw)
@@ -57,29 +83,39 @@ function wesnoth.wml_actions.cw_generate_creeps(cfg_raw)
     local score = cfg.score
     local count = cfg.count
     local variable = cfg.variable
+    local locations = helper.get_variable_array(cfg.locations)
     local key = cfg.key
     local data = {}
 
-    local function choice()
+    local units = cc.synchronize_choice(function()
+        local start = os.clock()
+
+        local available_locations = {}
+
         local units = {}
-    
-        for i = 1, count do
-            table.insert(units, generate_one(score, data))
+
+        for i = 1, #locations do
+            available_locations[i] = locations[i]
         end
 
-        return { value = table.concat(units, '#') }
-    end
-    
-    local result = wesnoth.synchronize_choice(choice, choice)
+        for i = 1, count do
+            local j = cc.choice_index(available_locations)
+        
+            table.insert(units, {
+                id = generate_one(score, data),
+                x = available_locations[j].x,
+                y = available_locations[j].y
+            })
 
-    local n = 0
-    for id in string.gmatch(result.value, "[^#]+") do
-        wesnoth.fire("set_variable", {
-            name = variable .. "[" .. tostring(n) .. "]." .. key,
-            value = id
-        })
-        n = n + 1
-    end
+            table.remove(available_locations, j)
+        end
+
+        wesnoth.message(string.format("%i creeps generated in: %f seconds", count, os.clock() - start))
+
+        return units
+    end)
+
+    helper.set_variable_array(variable, units)
 end
 
 >>

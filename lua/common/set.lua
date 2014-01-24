@@ -9,19 +9,23 @@ function cc.keys(t)
 end
 
 function cc.intersect(l)
+    local ignore_nil = l.ignore_nil or false
     local r = cc.copy(l[1])
 
     for i = 2, #l do
         local s = l[i]
-        local nr = {}
-
-        for k,v in pairs(r) do
-            if s[k] ~= nil then
-                nr[k] = v
+        
+        if s ~= nil then
+            local nr = {}
+            for k,v in pairs(r) do
+                if s[k] ~= nil then
+                    nr[k] = v
+                end
             end
+            r = nr
+        elseif not ignore_nil then
+            return {}
         end
-
-        r = nr
     end
 
     return r

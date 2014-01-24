@@ -277,17 +277,6 @@ local function check_item_status(item)
         return 'hidden'
     end
 
-    local too_expensive = wesnoth.eval_conditional {
-        { "variable", { 
-            name = "cc_shop_gold",
-            less_than = item.price 
-        }}
-    }
-
-    if too_expensive then
-        return 'too_expensive'
-    end
-
     if item.check_buyable ~= nil then
         wesnoth.set_variable("cc_unbuyable", false)
         wesnoth.set_variable("cc_unbuyable_reason", item.have_all_text or _"have all")
@@ -303,12 +292,25 @@ local function check_item_status(item)
         return 'unbuyable', item.have_all_text or _"have all"
     end
 
+    local too_expensive = wesnoth.eval_conditional {
+        { "variable", { 
+            name = "cc_shop_gold",
+            less_than = item.price 
+        }}
+    }
+
+    if too_expensive then
+        return 'too_expensive'
+    end
+
     return 'buyable'
 end
 
 -------------------------------------------------------------------------------
 
 local function show_section(section)
+    local start = os.clock()
+
     local function inherited_get(name)
         local value = section[name]
 
@@ -328,7 +330,7 @@ local function show_section(section)
     end
 
     local image_attr = inherited_get("image_attr")
-    local speaker    = inherited_get("speaker") or "unit"
+    local speaker    = inherited_get("speaker") or "narrator"
 
     -- Generate header
     ------------------
@@ -455,6 +457,10 @@ local function show_section(section)
         table.insert(message_cfg, { "option", option_cfg })
     end
 
+    section_time = section_time + os.clock() - start
+    section_num  = section_num + 1
+    item_num     = item_num + #section.items + #section.sections
+
     -- Show the sections
     --------------------
 
@@ -518,6 +524,12 @@ end
 
 function wesnoth.wml_actions.cc_shop(cfg_raw)
 
+    parse_time = 0
+    section_time = 0
+    section_num = 0
+    item_num = 0
+    local start = os.clock()
+
     -- get __literal from cfg_raw and delocalize it
     -----------------------------------------------
 
@@ -543,6 +555,8 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
     end
 
     populate_section_by_id(root_section)
+
+    local parse_time = os.clock() - start
 
     -- Location in the currently open shop
     --
@@ -579,6 +593,9 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
 
     clear_variable("cc_shop_location")
     clear_variable("cc_shop_gold")
+
+    wesnoth.message(string.format("shop performance: %.2f sec parser, %.2f sec generator (avg %.2f per section (%i total), %.2f per item (%i total))", 
+        parse_time, section_time, section_time / section_num, section_num, section_time / item_num, item_num))
 end
 
 >>

@@ -1,5 +1,13 @@
 <<
 
+function cc.choice_index(t)
+    if #t == 0 then
+        return nil
+    end
+
+    return math.floor(math.random(1, #t) + 0.5)
+end
+
 function cc.choice(t)
     if #t == 0 then
         return nil

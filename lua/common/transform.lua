@@ -58,7 +58,7 @@ function cc.transform(cfg)
             local include = comma_split(cfg.tf_include)
             local included = false
             
-            for i,s in ipairs(exclude) do
+            for i,s in ipairs(include) do
                 if categories[s] ~= nil then
                     included = true
                     break
