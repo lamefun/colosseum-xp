@@ -128,7 +128,8 @@ function cc_shop.item.weapon(cfg)
 
     return {
         price    = price,
-        name     = name,
+        name     = primary.user_name,
+        info     = cfg.info,
         image    = primary.image,
         benefits = benefits,
 

@@ -49,7 +49,8 @@
 --          [item]
 --              price=35
 --              name=_"name"
---              benefits=_"subtitle (eg. benefits of the item)"
+--              info=_"subtitle shown inside parentheses after the name"
+--              benefits=_"subtitle shown below the name"
 --              image=attacks/blank.png
 --              have_all_text=_"already have all"
 --
@@ -174,6 +175,7 @@ local function parse_item(cfg)
     return {
         price         = cfg.price         or wml_error("shop item has to have a price"),
         name          = cfg.name          or wml_error("shop item has to have a name"),
+        info          = cfg.info,
         benefits      = cfg.benefits,
         image         = cfg.image,
         have_all_text = cfg.have_all_text or _('have all'),
@@ -382,6 +384,15 @@ local function show_section(section)
     -----------------------------
 
     for i,item in ipairs(section.items) do
+        -- Name text
+        ------------
+
+        local name = item.name
+
+        if item.info ~= nil then
+            name = name .. string.format(" <span size='small' color='#9999aa'>(%s)</span>", item.info)
+        end
+
         -- Benefit text
         ---------------
     
@@ -407,7 +418,7 @@ local function show_section(section)
             table.insert(message_cfg, { "option", {
                 message=string.format(
                     "&%s=<span foreground='#88ff22'>%i gold</span>: %s%s",
-                    image, item.price, item.name, benefit_text),
+                    image, item.price, name, benefit_text),
 
                 { "command", {
                     { "gold", {
@@ -422,13 +433,13 @@ local function show_section(section)
             table.insert(message_cfg, { "option", {
                 message=string.format(
                     "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
-                    image, item.price, item.name, benefit_text),
+                    image, item.price, name, benefit_text),
             }})
         elseif status == 'unbuyable' then
             table.insert(message_cfg, { "option", {
                 message=string.format(
                     "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
-                    image, reason, item.name, benefit_text),
+                    image, reason, name, benefit_text),
             }})
         end
     end
