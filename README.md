@@ -3,8 +3,8 @@ Colosseum XP
 
   This is a heavily modified version of Colosseum fast by Laela. Features:
 
-  * Weapons: cowardly dagger, excalibur, arcane sword, singing sword, shotgun,
-    grenade, acid cloud, complaint, pike, pepper breath, cursed scythe,
+  * Weapons: cowardly dagger, excalibur, alchemist's blade, singing sword,
+    shotgun, grenade, acid cloud, complaint, pike, pepper breath, cursed scythe,
     smart saber, idiot club.
   * Utilities: suicide bomb, teleport, garlic.
   * Buy more than one ability per wave.
