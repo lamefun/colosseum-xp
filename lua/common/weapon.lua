@@ -128,7 +128,7 @@ function cc_shop.item.weapon(cfg)
             }}
         },
 
-        command = { "object", object_cfg }
+        command = { { "object", object_cfg } }
     }
 end
 

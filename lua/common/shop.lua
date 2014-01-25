@@ -422,16 +422,16 @@ local function show_section(section)
         -- Command
         ----------
 
-        local command = {}
+        local command_cfg = {}
 
         if item.prebuy ~= nil then
-            table.insert(command, item.prebuy)
+            table.insert(command_cfg, { "command", item.prebuy })
         end
 
-        table.insert(command, item.command)
+        table.insert(command_cfg, { "command", item.command })
 
         if item.postbuy ~= nil then
-            table.insert(command, item.postbuy)
+            table.insert(command_cfg, { "command", item.postbuy })
         end
 
         -- Option
@@ -451,7 +451,7 @@ local function show_section(section)
                         amount = -item.price
                     }},
 
-                    { "command", item.command }
+                    { "command", command_cfg }
                 }}
             }})
         elseif status == 'too_expensive' then
