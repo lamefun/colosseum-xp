@@ -86,7 +86,7 @@
 --
 --              [show_if]
 --                  # If present and not empty, item will only be shown when
---                  # all condition in this tag are met.
+--                  # all conditions in this tag are met.
 --
 --                  # Sub-tags [and], [or], [not] can be used.
 --              [/show_if]
