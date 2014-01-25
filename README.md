@@ -4,8 +4,8 @@ Colosseum XP
   This is a heavily modified version of Colosseum fast by Laela. Features:
 
   * Weapons: cowardly dagger, excalibur, alchemist's blade, singing sword,
-    shotgun, grenade, acid cloud, complaint, pike, pepper breath, cursed scythe,
-    smart saber, idiot club.
+    shotgun, grenade, acid cloud, alien beam, complaint, pike, pepper breath,
+    cursed scythe, smart saber, idiot club.
   * Utilities: suicide bomb, teleport, garlic.
   * Buy more than one ability per wave.
   * Extra polish:
@@ -16,6 +16,7 @@ Colosseum XP
    * Doesn't scroll to Platypus every turn.
    * Teams and income are now locked.
   * Fool-proofing:
+   * Allows to re-enter the shop after an accidental exit.
    * Doesn't allow to end turn while standing on the shop.
    * Gives a warning if you try to exit the shop with some items still
      buyable.
