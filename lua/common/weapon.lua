@@ -133,8 +133,8 @@ function cc_shop.item.weapon(cfg)
         image    = primary.image,
         benefits = benefits,
 
-        prepare = wml_find_tag(cfg, "prepare"),
-        cleanup = wml_find_tag(cfg, "cleanup"),
+        prepare = wml_find_cfg(cfg, "prepare"),
+        cleanup = wml_find_cfg(cfg, "cleanup"),
 
         have_all_text = _("already have"),
         have_all_if = {
