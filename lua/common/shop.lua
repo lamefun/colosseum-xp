@@ -512,7 +512,7 @@ local function warn_still_byuable(section)
         wesnoth.fire("message", {
             speaker = "narrator",
             caption = _"You haven't spent all your gold",
-            message = _"There are still things you could buy in this shop. Are you sure you want to exit?",
+            message = _"There are still things you can buy in this shop. Are you sure you want to exit?",
 
             { "option", {
                 message = _"&items/ball-green.png~SCALE(24,24)=Yes",
