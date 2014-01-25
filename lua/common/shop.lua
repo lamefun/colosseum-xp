@@ -76,6 +76,14 @@
 --                  # This is where you clean up variables set in [prepare].
 --              [/cleanup]
 --
+--              [prebuy]
+--                  # Actions executed before the item is bought.
+--              [/prebuy]
+--
+--              [postbuy]
+--                  # Actions executed after the item is bought.
+--              [/postbuy]
+--
 --              [show_if]
 --                  # If present and not empty, item will only be shown when
 --                  # all condition in this tag are met.
@@ -218,6 +226,8 @@ local function parse_section(cfg, parent, number)
 
         prepare    = wml_find_cfg(cfg, "prepare"),
         cleanup    = wml_find_cfg(cfg, "cleanup"),
+        prebuy     = wml_find_cfg(cfg, "prebuy"),
+        postbuy    = wml_find_cfg(cfg, "postbuy"),
         show_if    = wml_find_cfg(cfg, "show_if"),
         command    = wml_find_cfg(cfg, "command"),
 
@@ -408,6 +418,21 @@ local function show_section(section)
         --------
 
         local image = item.image and item.image .. (image_attr or "") or ""
+
+        -- Command
+        ----------
+
+        local command = {}
+
+        if item.prebuy ~= nil then
+            table.insert(command, item.prebuy)
+        end
+
+        table.insert(command, item.command)
+
+        if item.postbuy ~= nil then
+            table.insert(command, item.postbuy)
+        end
 
         -- Option
         ---------

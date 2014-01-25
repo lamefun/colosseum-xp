@@ -103,26 +103,6 @@ function cc_shop.item.weapon(cfg)
         add_effects(secondary, object_cfg)
     end
 
-    -- Generate command
-    -------------------
-
-    local command_cfg = {
-        { "object", object_cfg }
-    }
-
-    -- Prebuy and postbuy
-
-    local prebuy = wml_find_cfg(cfg, "prebuy")
-    local postbuy = wml_find_cfg(cfg, "postbuy")
-
-    if prebuy ~= nil then
-        table.insert(command_cfg, 1, { "command", prebuy })
-    end
-
-    if postbuy ~= nil then
-        table.insert(command_cfg, { "command", postbuy })
-    end
-
     -- Return
     ---------
 
@@ -135,6 +115,8 @@ function cc_shop.item.weapon(cfg)
 
         prepare = wml_find_cfg(cfg, "prepare"),
         cleanup = wml_find_cfg(cfg, "cleanup"),
+        prebuy  = wml_find_cfg(cfg, "prebuy"),
+        postbuy = wml_find_cfg(cfg, "postbuy"),
 
         have_all_text = _("already have"),
         have_all_if = {
@@ -146,7 +128,7 @@ function cc_shop.item.weapon(cfg)
             }}
         },
 
-        command = command_cfg
+        command = { "object", object_cfg }
     }
 end
 
