@@ -1,22 +1,10 @@
 <<
 
 -------------------------------------------------------------------------------
+--
 -- Tag transformations.
 --
--- [shop]
---   tf_categories=cw -- eg. cw stands for Creep War, ms stands for Megaseum
---   
---   [item]
---     price=60
---     price_cw=100 -- Price will be 100 in creep war
---     tf_order=2 -- Will be after the next item
---   [/item]
---
---   [item]
---     tf_exclude=cw,ms -- Excluded from Creep War and Megaseum
---     tf_order=1 -- Will be before the previous item
---   [/item]
--- [/shop]
+-- Documentation is in docs/transform.txt
 --
 -------------------------------------------------------------------------------
 

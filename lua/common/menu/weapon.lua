@@ -1,11 +1,19 @@
 <<
 
+-------------------------------------------------------------------------------
+-- 
+--  Weapon item for menu engine.
+--
+--  Documentation is in docs/cc_menu.txt
+--
+-------------------------------------------------------------------------------
+
 local textdomain = wesnoth.textdomain("wesnoth-colosseum-xp")
 local function _(s)
     return tostring(textdomain(s))
 end
 
-function cc_shop.item.weapon(cfg)
+function cc.menu_items.weapon(cfg)
     -- Parse
     --------
 
@@ -43,26 +51,26 @@ function cc_shop.item.weapon(cfg)
         name = name .. string.format(" <span size='small' color='#9999aa'>(%s)</span>", info)
     end
 
-    -- Generate benefits text
+    -- Generate subtitle text
     -------------------------
 
-    local function benefits_of(weapon)
-        local benefits = string.format("%i-%i %s-%s",
+    local function subtitle_of(weapon)
+        local subtitle = string.format("%i-%i %s-%s",
             weapon.damage, weapon.strikes, weapon.range, weapon.type)
 
         if weapon.specials ~= nil then
             for i,special_tag in ipairs(weapon.specials) do
-                benefits = benefits .. ", " .. special_tag[2].name
+                subtitle = subtitle .. ", " .. special_tag[2].name
             end
         end
 
-        return benefits
+        return subtitle
     end
 
-    local benefits = benefits_of(primary)
+    local subtitle = subtitle_of(primary)
 
     if secondary ~= nil then
-        benefits = benefits .. " &amp; " .. benefits_of(secondary)
+        subtitle = subtitle .. " &amp; " .. subtitle_of(secondary)
     end
 
     -- Generate object to give to the unit
@@ -111,12 +119,12 @@ function cc_shop.item.weapon(cfg)
         name     = primary.user_name,
         info     = cfg.info,
         image    = primary.image,
-        benefits = benefits,
+        subtitle = subtitle,
 
-        prepare = wml_find_cfg(cfg, "prepare"),
-        cleanup = wml_find_cfg(cfg, "cleanup"),
-        prebuy  = wml_find_cfg(cfg, "prebuy"),
-        postbuy = wml_find_cfg(cfg, "postbuy"),
+        preshow      = wml_find_cfg(cfg, "preshow"),
+        postshow     = wml_find_cfg(cfg, "postshow"),
+        preactivate  = wml_find_cfg(cfg, "preactivate"),
+        postactivate = wml_find_cfg(cfg, "postactivate"),
 
         have_all_text = _("already have"),
         have_all_if = {

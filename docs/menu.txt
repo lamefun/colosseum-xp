@@ -1,0 +1,184 @@
+This is how to use the Colosseum XP glorious menu engine.
+
+[cc_menu]
+    # The menu root is itself a section, so all attributes from the
+    # [section] subtag can be used here.
+
+    # If yes, shows a warning if the player attempts to exit the menu when the
+    # menu still contains buyable items the player can affort.
+    warn_remaining_gold=yes
+
+    # Show built-in gold indicator
+    gold_indicator=yes
+
+    [section]
+        name=_"Name"
+        image=attacks/blank.png
+        header=_"Here you can buy some items and make some adjustments"
+        speaker=$unit.id
+
+        # Attributes for all images in this section. Also applies to
+        # sub-sections, unless re-defined in the sub-sections themselves.
+        image_attr="~SCALE(32,32)"
+
+        [prepare]
+            # Actions executed before the section is shown.
+            # See item's prepare.
+        [/prepare]
+
+        [cleanup]
+            # Actions executed before the section is shown.
+            # See item's cleanup.
+        [/cleanup]
+
+        # Indicator, shown along with gold, eg. this one will be shown as:
+        # Gold: XX | Training left: XX
+        [indicator]
+            name=_"Training left"
+            value=$training_left
+        [/indicator]
+
+        [command]
+            # If present, this command will be executed instead of showing
+            # items.
+        [/command]
+
+        # A menu item
+        [item]
+            name=_"name"
+            info=_"subtitle shown inside parentheses after the name"
+            benefits=_"subtitle shown below the name"
+            image=attacks/blank.png
+
+            [prepare]
+                # Actions executed each time the section containing the
+                # item is shown, before the item itself is processed.
+
+                # The variables set here can be used in other parts of the
+                # items, eg.
+
+                # [buyable]
+                #     name=$hello
+                #     [prepare]
+                #         {VARIABLE hello "Hello $side_number"}
+                #     [/prepare]
+                # [/buyable] 
+            [/prepare]
+
+            [cleanup]
+                # Actions executed each time the section containing the
+                # item is shown.
+
+                # This is where you clean up variables set in [prepare].
+            [/cleanup]
+
+            [show_if]
+                # If present and not empty, item will only be shown when
+                # all conditions in this tag are met.
+
+                # Sub-tags [and], [or], [not] can be used.
+            [/show_if]
+
+            [command]
+                # Required. Actions executed when the player activates the
+                # item (after preactivate and before postactivate).
+            [/command]
+
+            [preactivate]
+                # Actions executed before the item is activated.
+            [/preactivate]
+
+            [postactivate]
+                # Actions executed after the item is activated.
+            [/postactivate]
+        [/item]
+
+        # A buyable item
+        [buyable]
+            price=35
+            have_all_text=_"have all"
+
+            [check_buyable]
+                # Extended [have_all_if] and have_all_text. Use if the
+                # item has complex buyability conditions or multiple
+                # possible reasons to be unbuyable.
+
+                # You can run arbitrary commands here to check if the
+                # item is buyable. If it isn't, set cc_unbuyable to yes
+                # and cc_unbuyable_reason to reason why it is unbuyable.
+                # If cc_unbuyable is set, but cc_unbuyable_reason isn't,
+                # have_all_text is used.
+            [/check_buyable]
+
+            [have_all_if]
+                # If present and not empty, item will only be buyable if
+                # all conditions in this tag are not met. Otherwise,
+                # have_all_text will be shown instead of price.
+
+                # Sub-tags [and], [or], [not] can be used.
+            [/have_all_if]
+        [/buyable]
+
+        # A weapon item
+        [weapon]
+            price=55
+
+            name=complaint
+            user_name=_"complaint"
+            info=_"a wah-wah, woo-woo weapon"
+            image=attacks/blank-attack.png
+
+            range=ranged
+            type=arcane
+
+            damage=7
+            strikes=1
+
+            [effect]
+                # Same as object effect
+            [/effect]
+
+            [prepare]
+                # Actions executed each time the section containing the
+                # item is shown, before the item itself is processed.
+
+                # The variables set here can be used in other parts of the
+                # items, eg.
+
+                # [buyable]
+                #     name=$hello
+                #     [prepare]
+                #         {VARIABLE hello "Hello $side_number"}
+                #     [/prepare]
+                # [/buyable] 
+            [/prepare]
+
+            [cleanup]
+                # Actions executed each time the section containing the
+                # item is shown.
+
+                # This is where you clean up variables set in [prepare].
+            [/cleanup]
+
+            [preactivate]
+                # Actions executed before the item is activated.
+            [/preactivate]
+
+            [postactivate]
+                # Actions executed after the item is activated.
+            [/postactivate]
+
+            [show_if]
+                # If present and not empty, item will only be shown when
+                # all conditions in this tag are met.
+
+                # Sub-tags [and], [or], [not] can be used.
+            [/show_if]
+        [/weapon]
+
+        # Sub-section
+        [section]
+            # ...
+        [/section]
+    [/section]
+[/cc_menu]

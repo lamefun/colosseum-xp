@@ -2,126 +2,9 @@
 
 -------------------------------------------------------------------------------
 -- 
---  This is shop engine of Colosseum XP. If this is insane / stupid / could be
---  done easier, please tell me.
+--  Colosseum XP glorious menu engine.
 --
---  Usage:
---
---  [cc_shop]
---      # The shop root is itself a section, so all attributes from the
---      # [section] subtag can be used here.
---
---      id=upgrade
---
---      [section]
---          name=_"Name"
---          image=attacks/blank.png
---          header=_"Here you can buy some items"
---          speaker=$unit.id
---
---          # Attributes for all images in this section. Also, applies to
---          # sub-sections, unless re-defined in the sub-sections themselves.
---          image_attr="~SCALE(32,32)"
---
---          [prepare]
---              # Actions executed before the section is shown.
---              # See item's prepare.
---          [/prepare]
---
---          [cleanup]
---              # Actions executed before the section is shown.
---              # See item's cleanup.
---          [/cleanup]
---
---          # Indicator, shown along with gold, eg. this one will be shown as:
---          # Gold: XX | Training left: XX
---          [indicator]
---              name=_"Training left"
---              value=$training_left
---          [/indicator]
---
---          [command]
---              # If present, this command will be executed instead of showing
---              # items.
---          [/command]
---
---          # A shop item
---          [item]
---              price=35
---              name=_"name"
---              info=_"subtitle shown inside parentheses after the name"
---              benefits=_"subtitle shown below the name"
---              image=attacks/blank.png
---              have_all_text=_"already have all"
---
---              [prepare]
---                  # Actions executed each time the section containing the
---                  # item is shown, before the item itself is processed.
---
---                  # The variables set here can be used in other parts of the
---                  # items, eg.
---
---                  # [item]
---                  #     name=$hello
---                  #     [prepare]
---                  #         {VARIABLE hello "Hello $side_number"}
---                  #     [/prepare]
---                  # [/item] 
---              [/prepare]
---
---              [cleanup]
---                  # Actions executed each time the section containing the
---                  # item is shown.
---
---                  # This is where you clean up variables set in [prepare].
---              [/cleanup]
---
---              [prebuy]
---                  # Actions executed before the item is bought.
---              [/prebuy]
---
---              [postbuy]
---                  # Actions executed after the item is bought.
---              [/postbuy]
---
---              [show_if]
---                  # If present and not empty, item will only be shown when
---                  # all conditions in this tag are met.
---
---                  # Sub-tags [and], [or], [not] can be used.
---              [/show_if]
---
---              [have_all_if]
---                  # If present and not empty, item will only be buyable if
---                  # all conditions in this tag are not met. Otherwise,
---                  # have_all_text will be shown instead of price.
---
---                  # Sub-tags [and], [or], [not] can be used.
---              [/have_all_if]
---
---              [check_buyable]
---                  # Extended [have_all_if] and have_all_text. Use if the
---                  # item has complex buyability conditions or multiple
---                  # possible reasons to be unbuyable.
---
---                  # You can run arbitrary commands here to check if the
---                  # item is buyable. If it isn't, set cc_unbuyable to yes
---                  # and cc_unbuyable_reason to reason why it is unbuyable.
---                  # If cc_unbuyable is set, but cc_unbuyable_reason isn't,
---                  # have_all_text is used.
---              [/check_buyable]
---
---              [command]
---                  # Required. Command executed when the player buys the item.
---              [/command]
---          [/item]
---
---          # Sub-section
---          [section]
---              # ...
---          [/section]
---      [/section]
---  [/cc_shop]
+--  Documentation is in docs/cc_menu.txt
 --
 -------------------------------------------------------------------------------
 
@@ -137,9 +20,9 @@ end
 -- Put funtions in this table to register section and item types
 -------------------------------------------------------------------------------
 
-cc_shop = {}
-cc_shop.item = {}
-cc_shop.section = {}
+cc.menu = {}
+cc.menu_items = {}
+cc.menu_sections = {}
 
 -------------------------------------------------------------------------------
 -- Delocalizer, because string.format doesn't understand userdata
@@ -176,24 +59,28 @@ function delocalize_tag(tag)
 end
 
 -------------------------------------------------------------------------------
--- cc_shop tag parsing
+-- cc_menu tag parsing
 -------------------------------------------------------------------------------
 
-local function parse_item(cfg)
+local function parse_item(cfg, buyable)
     return {
-        price         = cfg.price         or wml_error("shop item has to have a price"),
-        name          = cfg.name          or wml_error("shop item has to have a name"),
+        name          = cfg.name or wml_error("menu item has to have a name"),
         info          = cfg.info,
-        benefits      = cfg.benefits,
+        subtitle      = cfg.subtitle,
         image         = cfg.image,
-        have_all_text = cfg.have_all_text or _('have all'),
 
-        prepare       = wml_find_cfg(cfg, "prepare"),
-        cleanup       = wml_find_cfg(cfg, "cleanup"),
+        preshow       = wml_find_cfg(cfg, "preshow"),
+        postshow      = wml_find_cfg(cfg, "postshow"),
+        preactivate   = wml_find_cfg(cfg, "preactivate"),
+        postactivate  = wml_find_cfg(cfg, "postactivate"),
         show_if       = wml_find_cfg(cfg, "show_if"),
-        have_all_if   = wml_find_cfg(cfg, "have_all_if"),
-        check_buyable = wml_find_cfg(cfg, "check_buyable"),
-        command       = wml_find_cfg(cfg, "command") or wml_error("shop item has to have a command")
+        command       = wml_find_cfg(cfg, "command") or wml_error("menu item has to have a command"),
+
+        buyable       = buyable,
+        price         = buyable and (cfg.price or wml_error("buyable item has to have a price")) or nil,
+        have_all_text = cfg.have_all_text or _('have all'),
+        have_all_if   = buyable and wml_find_cfg(cfg, "have_all_if") or nil,
+        check_buyable = buyable and wml_find_cfg(cfg, "check_buyable") or nil,
     }
 end
 
@@ -213,26 +100,24 @@ local function parse_section(cfg, parent, number)
     -------------------------------------------------------------------------
 
     local section = {
-        parent     = parent,
-        id         = id,
+        parent      = parent,
+        id          = id,
 
-        name       = cfg.name  or wml_error("shop section has to have a name"),
-        image      = cfg.image,
-        image_attr = cfg.image_attr,
-        speaker    = cfg.speaker,
-        header     = cfg.header,
+        name        = cfg.name  or wml_error("menu section has to have a name"),
+        image       = cfg.image,
+        image_attr  = cfg.image_attr,
+        speaker     = cfg.speaker,
+        header      = cfg.header,
 
-        indicators = wml_find_many_tags(cfg, "indicator"),
+        indicators  = wml_find_many_tags(cfg, "indicator"),
 
-        prepare    = wml_find_cfg(cfg, "prepare"),
-        cleanup    = wml_find_cfg(cfg, "cleanup"),
-        prebuy     = wml_find_cfg(cfg, "prebuy"),
-        postbuy    = wml_find_cfg(cfg, "postbuy"),
-        show_if    = wml_find_cfg(cfg, "show_if"),
-        command    = wml_find_cfg(cfg, "command"),
+        preshow     = wml_find_cfg(cfg, "preshow"),
+        postshow    = wml_find_cfg(cfg, "postshow"),
+        show_if     = wml_find_cfg(cfg, "show_if"),
+        command     = wml_find_cfg(cfg, "command"),
 
-        items      = items,
-        sections   = sections
+        items       = items,
+        sections    = sections
     }
 
     -- Parse items
@@ -242,12 +127,14 @@ local function parse_section(cfg, parent, number)
 
     for i,tag in ipairs(cfg) do
         if tag[1] == "item" then
-            table.insert(items, parse_item(tag[2]))
+            table.insert(items, parse_item(tag[2], false))
+        elseif tag[1] == "buyable" then
+            table.insert(items, parse_item(tag[2], true))
         elseif tag[1] == "section" then
             table.insert(sections, parse_section(tag[2], section, sub_section_number))
             sub_section_number = sub_section_number + 1
-        elseif cc_shop.item[tag[1]] ~= nil then
-            table.insert(items, cc_shop.item[tag[1]](tag[2]))
+        elseif cc.menu_items[tag[1]] ~= nil then
+            table.insert(items, cc.menu_items[tag[1]](tag[2]))
         end
     end
 
@@ -256,35 +143,36 @@ end
 
 -------------------------------------------------------------------------------
 
-local function maybe_fire_commands(commands)
-    if commands ~= nil then
-        wesnoth.fire("command", commands)
-    end
-end
-
-local function maybe_check_condition(condition, if_nil)
-    if condition ~= nil then
-        return wesnoth.eval_conditional(condition)
-    else
-        return if_nil
-    end
-end
-
 local function clear_variable(name)
     wesnoth.fire("clear_variable", { name = name })
 end
 
 -------------------------------------------------------------------------------
 
-local function prepare_section(section)
-    maybe_fire_commands(section.prepare)
-
-    for i,item in ipairs(section.items) do
-        maybe_fire_commands(item.prepare)
+local function maybe_fire_command(command_cfg)
+    local cfg_type = type(command_cfg)
+    
+    if cfg_type == "table" then
+        wesnoth.fire("command", command_cfg)
+    elseif cfg_type == "function" then
+        command_cfg()
     end
 end
 
-local function check_item_status(item)
+local function maybe_check_condition(condition_cfg, if_nil)
+    local cfg_type = type(condition_cfg)
+    if cfg_type == "table" then
+        return wesnoth.eval_conditional(condition_cfg)
+    elseif cfg_type == "function" then
+        return condition_cfg
+    else
+        return if_nil
+    end
+end
+
+-------------------------------------------------------------------------------
+
+local function check_buyable_status(item)
     if not maybe_check_condition(item.show_if, true) then
         return 'hidden'
     end
@@ -300,13 +188,16 @@ local function check_item_status(item)
         if unbuyable == true or unbuyable == "true" or unbuyable == "yes" then
             return 'unbuyable', wesnoth.get_variable("cc_unbuyable_reason")
         end
+
+        clear_variable("cc_unbuyable")
+        clear_variable("cc_unbuyable_reason")
     elseif maybe_check_condition(item.have_all_if, false) then
         return 'unbuyable', item.have_all_text or _"have all"
     end
 
     local too_expensive = wesnoth.eval_conditional {
         { "variable", { 
-            name = "cc_shop_gold",
+            name = "cc_menu_gold",
             less_than = item.price 
         }}
     }
@@ -319,9 +210,33 @@ local function check_item_status(item)
 end
 
 -------------------------------------------------------------------------------
+-- Section showing
+-------------------------------------------------------------------------------
+
+local function preshow_section(section)
+    maybe_fire_command(section.preshow)
+    for i,item in ipairs(section.items) do
+        maybe_fire_command(item.preshow)
+    end
+end
+
+local function postshow_section(section)
+    for i,item in ipairs(section.items) do
+        maybe_fire_command(item.postshow)
+    end
+    maybe_fire_command(section.postshow)
+end
 
 local function show_section(section)
     local start = os.clock()
+
+    -- Set variable that will indicate index of the activated item
+    --------------------------------------------------------------
+
+    wesnoth.set_variable("cc_menu_activated_item", 0)
+
+    -- Find out speaker and image_attr
+    ----------------------------------
 
     local function inherited_get(name)
         local value = section[name]
@@ -347,7 +262,7 @@ local function show_section(section)
     -- Generate header
     ------------------
 
-    local header = "<span foreground='gold'>Gold: $cc_shop_gold</span>"
+    local header = "<span foreground='gold'>Gold: $cc_menu_gold</span>"
 
     for i,indicator in ipairs(section.indicators) do
         local color = indicator[2].color or '#cccccc'
@@ -384,7 +299,7 @@ local function show_section(section)
 
         { "command", {
             { "set_variable", {
-                name = "cc_shop_location",
+                name = "cc_menu_location",
                 value = section.parent and section.parent.id or "e"
             }}
         }}
@@ -406,12 +321,12 @@ local function show_section(section)
         -- Benefit text
         ---------------
     
-        local benefit_text=""
+        local subtitle_text=""
 
-        if item.benefits ~= nil then
-            benefit_text = string.format(
+        if item.subtitle ~= nil then
+            subtitle_text = string.format(
                 "\n<span size='small' foreground='#aaaaaa'>%s</span>", 
-                item.benefits)
+                item.subtitle)
         end
 
         -- Image
@@ -419,53 +334,56 @@ local function show_section(section)
 
         local image = item.image and item.image .. (image_attr or "") or ""
 
-        -- Command
-        ----------
-
-        local command_cfg = {}
-
-        if item.prebuy ~= nil then
-            table.insert(command_cfg, { "command", item.prebuy })
-        end
-
-        table.insert(command_cfg, { "command", item.command })
-
-        if item.postbuy ~= nil then
-            table.insert(command_cfg, { "command", item.postbuy })
-        end
-
         -- Option
         ---------
 
-        local status, reason = check_item_status(item)
+        if item.buyable then
+            local status, reason = check_buyable_status(item)
+            if status == 'buyable' then
+                table.insert(message_cfg, { "option", {
+                    message=string.format(
+                        "&%s=<span foreground='#88ff22'>%i gold</span>: %s%s",
+                        image, item.price, name, subtitle_text),
 
-        if status == 'buyable' then
-            table.insert(message_cfg, { "option", {
-                message=string.format(
-                    "&%s=<span foreground='#88ff22'>%i gold</span>: %s%s",
-                    image, item.price, name, benefit_text),
+                    { "command", {
+                        { "gold", {
+                            side = "$side_number",
+                            amount = -item.price
+                        }},
 
-                { "command", {
-                    { "gold", {
-                        side = "$side_number",
-                        amount = -item.price
-                    }},
-
-                    { "command", command_cfg }
-                }}
-            }})
-        elseif status == 'too_expensive' then
-            table.insert(message_cfg, { "option", {
-                message=string.format(
-                    "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
-                    image, item.price, name, benefit_text),
-            }})
-        elseif status == 'unbuyable' then
-            table.insert(message_cfg, { "option", {
-                message=string.format(
-                    "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
-                    image, reason, name, benefit_text),
-            }})
+                        { "command", {
+                            { "set_variable", {
+                                name = "cc_menu_activated_item",
+                                value = i
+                            }}
+                        }}
+                    }}
+                }})
+            elseif status == 'too_expensive' then
+                table.insert(message_cfg, { "option", {
+                    message=string.format(
+                        "&%s=<span foreground='#ff4411'>%i gold</span>: %s%s",
+                        image, item.price, name, subtitle_text),
+                }})
+            elseif status == 'unbuyable' then
+                table.insert(message_cfg, { "option", {
+                    message=string.format(
+                        "&%s=<span foreground='#eecc22'>%s</span>: %s%s",
+                        image, reason, name, subtitle_text),
+                }})
+            end
+        else
+            if maybe_check_condition(item.show_if, true) then
+                table.insert(message_cfg, { "option", {
+                    message=string.format("&%s=%s%s", image, name, subtitle_text),
+                    { "command", {
+                        { "set_variable", {
+                            name = "cc_menu_activated_item",
+                            value = i
+                        }}
+                    }}
+                }})
+            end
         end
     end
 
@@ -480,7 +398,7 @@ local function show_section(section)
 
             { "command", {
                 { "set_variable", {
-                    name = "cc_shop_location",
+                    name = "cc_menu_location",
                     value = sub.id
                 }}
             }}
@@ -497,19 +415,24 @@ local function show_section(section)
     section_num  = section_num + 1
     item_num     = item_num + #section.items + #section.sections
 
-    -- Show the sections
-    --------------------
+    -- Show the message
+    -------------------
 
     wesnoth.fire("message", message_cfg)
-end
 
-local function cleanup_section(section)
-    for i,item in ipairs(section.items) do
-        maybe_fire_commands(item.cleanup)
+    -- If an item was activated, do its commands
+    --------------------------------------------
+
+    local activated_index = wesnoth.get_variable("cc_menu_activated_item")
+    if activated_index ~= 0 then
+        local item = section.items[activated_index]
+        maybe_fire_command(item.preactivate)
+        maybe_fire_command(item.command)
+        maybe_fire_command(item.postactivate)
     end
-
-    maybe_fire_commands(section.cleanup)
 end
+
+-------------------------------------------------------------------------------
 
 local function warn_still_byuable(section)
     local have_buyable = false
@@ -523,15 +446,15 @@ local function warn_still_byuable(section)
 
     local function check_items(section)
         for i,item in ipairs(section.items) do
-            if check_item_status(item) == 'buyable' then
+            if check_buyable_status(item) == 'buyable' then
                 have_buyable = true
             end
         end
     end
 
-    with_all(section, prepare_section)
+    with_all(section, preshow_section)
     with_all(section, check_items)
-    with_all(section, cleanup_section)
+    with_all(section, postshow_section)
 
     if have_buyable == true then
         wesnoth.fire("message", {
@@ -547,7 +470,7 @@ local function warn_still_byuable(section)
                 message = _"&items/ball-magenta.png~SCALE(24,24)=No",
                 { "command", {
                     { "set_variable", {
-                        name = "cc_shop_location",
+                        name = "cc_menu_location",
                         value = "r"
                     }}
                 }}
@@ -558,7 +481,9 @@ local function warn_still_byuable(section)
     return true
 end
 
-function wesnoth.wml_actions.cc_shop(cfg_raw)
+-------------------------------------------------------------------------------
+
+function wesnoth.wml_actions.cc_menu(cfg_raw)
 
     parse_time = 0
     section_time = 0
@@ -571,7 +496,7 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
 
     local cfg = delocalize_tag_cfg(cfg_raw.__literal)
 
-    -- Parse the cc_shop tag
+    -- Parse the cc_menu tag
     ------------------------
 
     cc.transform(cfg)
@@ -601,34 +526,33 @@ function wesnoth.wml_actions.cc_shop(cfg_raw)
     --  r.1   - section 1
     --- r.N   - section N
     --  r.N.M - sub-section M in section N
-    wesnoth.set_variable("cc_shop_location", "r")
+    wesnoth.set_variable("cc_menu_location", "r")
 
     while true do
         wesnoth.fire("store_gold", {
             side = "$side_number",
-            variable = "cc_shop_gold"
+            variable = "cc_menu_gold"
         })
 
-        local location = wesnoth.get_variable("cc_shop_location")
+        local location = wesnoth.get_variable("cc_menu_location")
 
         if location == "e" then
             warn_still_byuable(root_section)
 
-            location = wesnoth.get_variable("cc_shop_location")
+            location = wesnoth.get_variable("cc_menu_location")
             if location == "e" then
                 break
             end
         end
 
         local section = section_by_id[location]
-
-        prepare_section(section)
+        preshow_section(section)
         show_section(section)
-        cleanup_section(section)
+        postshow_section(section)
     end
 
-    clear_variable("cc_shop_location")
-    clear_variable("cc_shop_gold")
+    clear_variable("cc_menu_location")
+    clear_variable("cc_menu_gold")
 
     -- wesnoth.message(string.format("shop performance: %.2f sec parser, %.2f sec generator (avg %.2f per section (%i total), %.2f per item (%i total))", 
     --     parse_time, section_time, section_time / section_num, section_num, section_time / item_num, item_num))

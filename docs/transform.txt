@@ -1,0 +1,22 @@
+A very convenient tag tansformation system.
+
+[cc_transform]
+    # Categories separated with comma
+    tf_categories=creepwar,race_drake
+
+    [set_variable]
+        # If tf_include tag is present, the tag will only be included in the
+        # specified categories.
+        tf_include=creepwar
+
+        # If tf_include tag is present, the tag will be excluded from the
+        # specified categories.
+        tf_exclude=race_drake
+
+        # You can use categories to override 
+        value=60
+        value_creepwar=80
+        value_race_drake=30
+
+    [/set_variable]
+[/cc_transform]
