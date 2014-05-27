@@ -115,6 +115,7 @@ function cc.menu_items.weapon(cfg)
     ---------
 
     return {
+        buyable  = true,
         price    = price,
         name     = primary.user_name,
         info     = cfg.info,
