@@ -188,9 +188,7 @@ local function generate_one(score, data)
                     unit_tmp_cache[id] = tmp
                 end
 
-                if ut.max_moves / wesnoth.unit_movement_cost(tmp, "Gt") >= 1 then
-                    table.insert(available, id)
-                end
+                table.insert(available, id)
             end
         end
     end
