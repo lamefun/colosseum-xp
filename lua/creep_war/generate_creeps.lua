@@ -180,7 +180,7 @@ local function generate_one(score, data)
                 unit_cfg_cache[id] = cfg
             end
 
-            if cfg.alignment == alignment then
+            if cfg.alignment == alignment and cfg.role == role then
                 table.insert(available, id)
             end
         end
