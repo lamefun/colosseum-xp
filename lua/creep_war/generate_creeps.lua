@@ -3,7 +3,6 @@
 local helper = wesnoth.require "lua/helper.lua"
 
 local unit_cfg_cache = {}
-local unit_tmp_cache = {}
 
 local unit_ids = {
     "Ghost",
@@ -182,17 +181,11 @@ local function generate_one(score, data)
             end
 
             if cfg.alignment == alignment then
-                local tmp = unit_tmp_cache[id]
-                if tmp == nil then
-                    tmp = wesnoth.create_unit { type = id, random_traits = false }
-                    unit_tmp_cache[id] = tmp
-                end
-
                 table.insert(available, id)
             end
         end
     end
-    
+
     if #available == 0 then
         -- if the conditions are unsatisfiable, generate at least something
         available = level_available
@@ -208,7 +201,6 @@ function wesnoth.wml_actions.cw_generate_creeps(cfg_raw)
     local count = cfg.count
     local variable = cfg.variable
     local locations = helper.get_variable_array(cfg.locations)
-    local key = cfg.key
     local data = {}
 
     local units = cc.synchronize_choice(function()
