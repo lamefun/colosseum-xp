@@ -204,10 +204,7 @@ function wesnoth.wml_actions.cw_generate_creeps(cfg_raw)
     local data = {}
 
     local units = cc.synchronize_choice(function()
-        local start = os.clock()
-
         local available_locations = {}
-
         local units = {}
 
         for i = 1, #locations do
@@ -225,8 +222,6 @@ function wesnoth.wml_actions.cw_generate_creeps(cfg_raw)
 
             table.remove(available_locations, j)
         end
-
-        wesnoth.message(string.format("%i creeps generated in: %f seconds", count, os.clock() - start))
 
         return units
     end)
